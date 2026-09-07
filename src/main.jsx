@@ -122,11 +122,13 @@ function App() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
 
           <div className="flex items-center gap-3">
+
             <div className="rounded-xl bg-emerald-500/15 p-2">
               <Leaf className="text-emerald-400" />
             </div>
 
             <div>
+
               <h1 className="font-bold text-lg">
                 SmartWaste
               </h1>
@@ -134,7 +136,9 @@ function App() {
               <p className="text-xs text-slate-400">
                 Intelligent Collection System
               </p>
+
             </div>
+
           </div>
 
           <button
@@ -146,6 +150,7 @@ function App() {
 
         </div>
       </header>
+
 
       <div className="mx-auto flex max-w-7xl">
 
@@ -159,6 +164,7 @@ function App() {
           <div className="space-y-1">
 
             {nav.map(([name, Icon]) => (
+
               <button
                 key={name}
                 onClick={() => {
@@ -169,18 +175,24 @@ function App() {
                   "nav " + (page === name ? "active" : "")
                 }
               >
+
                 <Icon size={18} />
+
                 {name}
+
               </button>
+
             ))}
 
           </div>
 
         </aside>
 
+
         <main className="min-w-0 flex-1 p-5 md:p-8">
 
           {page === "Dashboard" ? (
+
             <Dashboard
               bins={bins}
               overview={overview}
@@ -188,14 +200,23 @@ function App() {
               error={error}
               refresh={refreshAll}
             />
+
           ) : page === "Route Optimization" ? (
+
             <RouteOptimization
               routeData={routeData}
               loading={loading}
               refresh={fetchRoute}
             />
+
+          ) : page === "Alerts" ? (
+
+            <Alerts />
+
           ) : (
+
             <Generic page={page} />
+
           )}
 
         </main>
@@ -256,8 +277,11 @@ function Dashboard({
             onClick={refresh}
             className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-500"
           >
+
             <RefreshCw size={16} />
+
             Refresh
+
           </button>
 
         </div>
@@ -266,9 +290,13 @@ function Dashboard({
 
 
       {error && (
+
         <div className="mb-6 rounded-xl border border-red-800 bg-red-950/40 p-4 text-red-300">
+
           ⚠️ {error}
+
         </div>
+
       )}
 
 
@@ -404,8 +432,7 @@ function Dashboard({
                     </b>
 
                     <p>
-                      {bin.fill_level}% full ·{" "}
-                      {bin.area}
+                      {bin.fill_level}% full · {bin.area}
                     </p>
 
                   </div>
@@ -491,8 +518,11 @@ function RouteOptimization({
             onClick={refresh}
             className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-500"
           >
+
             <RefreshCw size={16} />
+
             Refresh Route
+
           </button>
 
         </div>
@@ -566,8 +596,11 @@ function RouteOptimization({
               >
 
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 font-bold text-emerald-400">
+
                   {index + 1}
+
                 </div>
+
 
                 <div className="flex-1">
 
@@ -580,6 +613,7 @@ function RouteOptimization({
                   </p>
 
                 </div>
+
 
                 <div className="text-right">
 
@@ -596,6 +630,321 @@ function RouteOptimization({
               </div>
 
             ))}
+
+          </div>
+
+        )}
+
+      </section>
+
+    </div>
+  );
+}
+
+
+function Alerts() {
+
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchAlerts = async () => {
+
+    try {
+
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(
+        `${API_URL}/api/bins`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch alerts");
+      }
+
+      const data = await response.json();
+
+      const alertBins = data.filter(
+        (bin) => bin.fill_level >= 60
+      );
+
+      setAlerts(alertBins);
+
+    } catch (err) {
+
+      console.error(err);
+      setError("Failed to load alerts");
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  };
+
+
+  useEffect(() => {
+    fetchAlerts();
+  }, []);
+
+
+  const critical = alerts.filter(
+    (bin) => bin.fill_level >= 80
+  );
+
+  const warning = alerts.filter(
+    (bin) =>
+      bin.fill_level >= 60 &&
+      bin.fill_level < 80
+  );
+
+
+  return (
+    <div>
+
+      <div className="mb-8">
+
+        <p className="text-emerald-400 text-sm font-semibold">
+          SMART CITY OPERATIONS
+        </p>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+
+          <div>
+
+            <h2 className="mt-1 text-3xl font-bold">
+              Alerts
+            </h2>
+
+            <p className="mt-2 text-slate-400">
+              Live alerts generated from bin fill levels.
+            </p>
+
+          </div>
+
+          <button
+            onClick={fetchAlerts}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-500"
+          >
+
+            <RefreshCw size={16} />
+
+            Refresh Alerts
+
+          </button>
+
+        </div>
+
+      </div>
+
+
+      {error && (
+
+        <div className="mb-6 rounded-xl border border-red-800 bg-red-950/40 p-4 text-red-300">
+
+          ⚠️ {error}
+
+        </div>
+
+      )}
+
+
+      <div className="grid gap-4 sm:grid-cols-2">
+
+        <Card
+          title="Critical Alerts"
+          value={critical.length}
+          icon={AlertTriangle}
+        />
+
+        <Card
+          title="Warning Alerts"
+          value={warning.length}
+          icon={AlertTriangle}
+        />
+
+      </div>
+
+
+      <section className="panel mt-6">
+
+        <div className="flex items-center justify-between">
+
+          <h3 className="font-semibold">
+            Active Alerts
+          </h3>
+
+          <span className="text-xs text-emerald-400">
+            ● API CONNECTED
+          </span>
+
+        </div>
+
+
+        {loading ? (
+
+          <p className="mt-6 text-slate-400">
+            Loading alerts...
+          </p>
+
+        ) : alerts.length === 0 ? (
+
+          <div className="mt-6 rounded-xl bg-emerald-500/10 p-5 text-center">
+
+            <Leaf
+              className="mx-auto text-emerald-400"
+              size={32}
+            />
+
+            <p className="mt-2 font-semibold">
+              No active alerts
+            </p>
+
+            <p className="mt-1 text-sm text-slate-400">
+              All bins are currently below the warning level.
+            </p>
+
+          </div>
+
+        ) : (
+
+          <div className="mt-5 space-y-4">
+
+            {alerts.map((bin) => {
+
+              const isCritical =
+                bin.fill_level >= 80;
+
+              return (
+
+                <div
+                  key={bin.id}
+                  className={
+                    "rounded-xl border p-5 " +
+                    (
+                      isCritical
+                        ? "border-red-800 bg-red-950/30"
+                        : "border-amber-800 bg-amber-950/30"
+                    )
+                  }
+                >
+
+                  <div className="flex items-start gap-4">
+
+                    <div
+                      className={
+                        "rounded-full p-3 " +
+                        (
+                          isCritical
+                            ? "bg-red-500/15"
+                            : "bg-amber-500/15"
+                        )
+                      }
+                    >
+
+                      <AlertTriangle
+                        size={22}
+                        className={
+                          isCritical
+                            ? "text-red-400"
+                            : "text-amber-400"
+                        }
+                      />
+
+                    </div>
+
+
+                    <div className="flex-1">
+
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+
+                        <div>
+
+                          <h4 className="font-bold">
+                            {bin.id}
+                          </h4>
+
+                          <p className="text-sm text-slate-400">
+                            {bin.area}
+                          </p>
+
+                        </div>
+
+
+                        <span
+                          className={
+                            "rounded-full px-3 py-1 text-xs font-bold " +
+                            (
+                              isCritical
+                                ? "bg-red-500/15 text-red-300"
+                                : "bg-amber-500/15 text-amber-300"
+                            )
+                          }
+                        >
+
+                          {isCritical
+                            ? "CRITICAL"
+                            : "WARNING"}
+
+                        </span>
+
+                      </div>
+
+
+                      <div className="mt-4">
+
+                        <div className="flex justify-between text-sm">
+
+                          <span className="text-slate-400">
+                            Fill Level
+                          </span>
+
+                          <span className="font-bold">
+                            {bin.fill_level}%
+                          </span>
+
+                        </div>
+
+
+                        <div className="mt-2 h-2 rounded-full bg-slate-800">
+
+                          <div
+                            className={
+                              "h-2 rounded-full " +
+                              (
+                                isCritical
+                                  ? "bg-red-400"
+                                  : "bg-amber-400"
+                              )
+                            }
+                            style={{
+                              width: `${bin.fill_level}%`
+                            }}
+                          />
+
+                        </div>
+
+                      </div>
+
+
+                      <p className="mt-4 text-sm">
+
+                        {isCritical
+                          ? "Immediate pickup required."
+                          : "Pickup recommended soon."}
+
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              );
+
+            })}
 
           </div>
 
