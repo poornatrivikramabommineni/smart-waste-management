@@ -2,16 +2,17 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import get_db, Base, engine
 from models import Bin
 from route_optimizer import optimize_route
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Smart Waste Management API",
     description="Backend API for Smart Waste Management System",
     version="1.0.0"
 )
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
