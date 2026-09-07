@@ -1,5 +1,7 @@
 ```javascript
 import React, { useEffect, useState } from "react";
+
+// Dashboard connected to live FastAPI overview
 import { createRoot } from "react-dom/client";
 import {
   LayoutDashboard,
