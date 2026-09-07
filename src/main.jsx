@@ -1,3 +1,4 @@
+```javascript
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -22,9 +23,18 @@ function App() {
   const [page, setPage] = useState("Dashboard");
   const [open, setOpen] = useState(false);
   const [bins, setBins] = useState([]);
+
+  const [overview, setOverview] = useState({
+    pending_pickup: 0,
+    routes_active: 0,
+    today_collections: 0,
+    predicted_overflow: 0
+  });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Fetch bin data from FastAPI
   const fetchBins = async () => {
     try {
       setLoading(true);
@@ -46,9 +56,35 @@ function App() {
     }
   };
 
+  // Fetch collection overview from FastAPI
+  const fetchOverview = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/api/dashboard/overview`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard overview");
+      }
+
+      const data = await response.json();
+      setOverview(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Load data when application starts
   useEffect(() => {
     fetchBins();
+    fetchOverview();
   }, []);
+
+  // Refresh both bin data and overview
+  const refreshAll = () => {
+    fetchBins();
+    fetchOverview();
+  };
 
   const nav = [
     ["Dashboard", LayoutDashboard],
@@ -67,16 +103,21 @@ function App() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
 
           <div className="flex items-center gap-3">
+
             <div className="rounded-xl bg-emerald-500/15 p-2">
               <Leaf className="text-emerald-400" />
             </div>
 
             <div>
-              <h1 className="font-bold text-lg">SmartWaste</h1>
+              <h1 className="font-bold text-lg">
+                SmartWaste
+              </h1>
+
               <p className="text-xs text-slate-400">
                 Intelligent Collection System
               </p>
             </div>
+
           </div>
 
           <button
@@ -88,6 +129,7 @@ function App() {
 
         </div>
       </header>
+
 
       <div className="mx-auto flex max-w-7xl">
 
@@ -101,34 +143,48 @@ function App() {
           <div className="space-y-1">
 
             {nav.map(([name, Icon]) => (
+
               <button
                 key={name}
                 onClick={() => {
                   setPage(name);
                   setOpen(false);
                 }}
-                className={"nav " + (page === name ? "active" : "")}
+                className={
+                  "nav " +
+                  (page === name ? "active" : "")
+                }
               >
+
                 <Icon size={18} />
+
                 {name}
+
               </button>
+
             ))}
 
           </div>
 
         </aside>
 
+
         <main className="min-w-0 flex-1 p-5 md:p-8">
 
           {page === "Dashboard" ? (
+
             <Dashboard
               bins={bins}
+              overview={overview}
               loading={loading}
               error={error}
-              refresh={fetchBins}
+              refresh={refreshAll}
             />
+
           ) : (
+
             <Generic page={page} />
+
           )}
 
         </main>
@@ -140,12 +196,22 @@ function App() {
 }
 
 
-function Dashboard({ bins, loading, error, refresh }) {
+function Dashboard({
+  bins,
+  overview,
+  loading,
+  error,
+  refresh
+}) {
 
-  const normal = bins.filter((b) => b.fill_level < 60).length;
+  const normal = bins.filter(
+    (b) => b.fill_level < 60
+  ).length;
 
   const warning = bins.filter(
-    (b) => b.fill_level >= 60 && b.fill_level < 80
+    (b) =>
+      b.fill_level >= 60 &&
+      b.fill_level < 80
   ).length;
 
   const critical = bins.filter(
@@ -154,6 +220,7 @@ function Dashboard({ bins, loading, error, refresh }) {
 
   return (
     <>
+
       <div className="mb-8">
 
         <p className="text-emerald-400 text-sm font-semibold">
@@ -163,6 +230,7 @@ function Dashboard({ bins, loading, error, refresh }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
 
           <div>
+
             <h2 className="mt-1 text-3xl font-bold">
               Waste Management Dashboard
             </h2>
@@ -170,14 +238,19 @@ function Dashboard({ bins, loading, error, refresh }) {
             <p className="mt-2 text-slate-400">
               Live data from SmartWaste FastAPI backend.
             </p>
+
           </div>
+
 
           <button
             onClick={refresh}
             className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-500"
           >
+
             <RefreshCw size={16} />
+
             Refresh
+
           </button>
 
         </div>
@@ -186,9 +259,13 @@ function Dashboard({ bins, loading, error, refresh }) {
 
 
       {error && (
+
         <div className="mb-6 rounded-xl border border-red-800 bg-red-950/40 p-4 text-red-300">
+
           ⚠️ {error}
+
         </div>
+
       )}
 
 
@@ -308,7 +385,10 @@ function Dashboard({ bins, loading, error, refresh }) {
               .filter((bin) => bin.fill_level >= 80)
               .map((bin) => (
 
-                <div className="alert" key={bin.id}>
+                <div
+                  className="alert"
+                  key={bin.id}
+                >
 
                   <AlertTriangle size={18} />
 
@@ -341,26 +421,27 @@ function Dashboard({ bins, loading, error, refresh }) {
           Collection Overview
         </h3>
 
+
         <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">
 
           <Metric
             label="Pending Pickup"
-            value={critical * 2}
+            value={overview.pending_pickup}
           />
 
           <Metric
             label="Routes Active"
-            value="4"
+            value={overview.routes_active}
           />
 
           <Metric
             label="Today's Collections"
-            value="38"
+            value={overview.today_collections}
           />
 
           <Metric
             label="Predicted Overflow"
-            value="7"
+            value={overview.predicted_overflow}
           />
 
         </div>
@@ -391,9 +472,11 @@ function Card({ title, value, icon: Icon }) {
 
       </div>
 
+
       <p className="mt-3 text-3xl font-bold">
         {value}
       </p>
+
 
       <p className="mt-1 text-xs text-slate-500">
         From FastAPI
@@ -435,9 +518,11 @@ function Generic({ page }) {
         SMARTWASTE MODULE
       </p>
 
+
       <h2 className="mt-1 text-3xl font-bold">
         {page}
       </h2>
+
 
       <div className="mt-6 panel">
 
@@ -454,9 +539,11 @@ function Generic({ page }) {
 
             </div>
 
+
             <h3 className="text-xl font-semibold">
               {page} module
             </h3>
+
 
             <p className="mt-2 max-w-md text-slate-400">
               This module will be connected to our FastAPI
@@ -478,3 +565,4 @@ function Generic({ page }) {
 createRoot(
   document.getElementById("root")
 ).render(<App />);
+```
