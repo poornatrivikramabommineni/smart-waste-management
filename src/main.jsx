@@ -1586,40 +1586,36 @@ function Analytics() {
     </div>
   );
 }
-function Card({
-  title,
-  value,
-  icon: Icon
-}) {
-
 function LiveMap() {
   const [bins, setBins] = useState([]);
   const [loading, setLoading] = useState(true);
-  const mapRef = useState(null)[0];
-
-  const fetchBins = async () => {
-    try {
-      setLoading(true);
-
-      const response = await fetch(`${API_URL}/api/bins`);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch bins");
-      }
-
-      const data = await response.json();
-
-      console.log("Live Map bins:", data);
-
-      setBins(data);
-    } catch (error) {
-      console.error("Map API Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    const fetchBins = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await fetch(`${API_URL}/api/bins`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch bins");
+        }
+
+        const data = await response.json();
+
+        console.log("Live Map bins:", data);
+
+        setBins(data);
+      } catch (error) {
+        console.error("Map API Error:", error);
+        setError("Unable to load bin locations.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchBins();
   }, []);
 
@@ -1632,11 +1628,6 @@ function LiveMap() {
 
     if (!container) {
       console.error("Map container not found");
-      return;
-    }
-
-    // Prevent Leaflet from initializing twice
-    if (container._leaflet_id) {
       return;
     }
 
@@ -1653,28 +1644,22 @@ function LiveMap() {
     ).addTo(map);
 
     bins.forEach((bin, index) => {
-
       const lat =
-        bin.latitude ??
-        (16.5062 + index * 0.03);
+        bin.latitude ?? (16.5062 + index * 0.03);
 
       const lng =
-        bin.longitude ??
-        (80.6480 + index * 0.03);
+        bin.longitude ?? (80.6480 + index * 0.03);
 
-      const marker = L.marker([
-        lat,
-        lng
-      ]).addTo(map);
+      const marker = L.marker([lat, lng]).addTo(map);
 
       marker.bindPopup(`
         <div style="min-width:180px">
           <strong>${bin.id}</strong>
-          <br/>
+          <br />
           Area: ${bin.area}
-          <br/>
+          <br />
           Fill Level: ${bin.fill_level}%
-          <br/>
+          <br />
           Status: ${bin.status}
         </div>
       `);
@@ -1687,115 +1672,114 @@ function LiveMap() {
     return () => {
       map.remove();
     };
-
   }, [bins, loading]);
 
   return (
-    <div>
+    <div className="space-y-6">
 
-      <div className="mb-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-emerald-400 text-sm font-semibold">
+            SMART CITY OPERATIONS
+          </p>
 
-        <p className="text-emerald-400 text-sm font-semibold">
-          SMART CITY OPERATIONS
-        </p>
+          <h2 className="mt-1 text-3xl font-bold">
+            Live Map
+          </h2>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-
-          <div>
-
-            <h2 className="mt-1 text-3xl font-bold">
-              Live Map
-            </h2>
-
-            <p className="mt-2 text-slate-400">
-              Monitor waste bin locations and fill levels.
-            </p>
-
-          </div>
-
-          <button
-            onClick={fetchBins}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-500"
-          >
-            <RefreshCw size={16} />
-            Refresh Map
-          </button>
-
+          <p className="mt-2 text-slate-400">
+            Real-time waste bin locations and status.
+          </p>
         </div>
 
+        <button
+          onClick={() => window.location.reload()}
+          className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-500"
+        >
+          <RefreshCw size={16} />
+          Refresh
+        </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-4">
+      {error && (
+        <div className="rounded-xl border border-red-800 bg-red-950/40 p-4 text-red-300">
+          ⚠️ {error}
+        </div>
+      )}
 
-        <section className="panel lg:col-span-3">
-
-          <div className="flex items-center justify-between mb-4">
-
-            <h3 className="font-semibold">
-              Waste Bin Locations
-            </h3>
-
-            <span className="text-xs text-emerald-400">
-              ● LIVE API
-            </span>
-
-          </div>
-
-          {loading ? (
-
-            <p className="text-slate-400">
-              Loading map...
-            </p>
-
-          ) : (
-
-            <div
-              id="live-map"
-              style={{
-                height: "550px",
-                width: "100%",
-                borderRadius: "16px",
-                overflow: "hidden",
-                background: "#1e293b"
-              }}
-            />
-
-          )}
-
-        </section>
-
+      {loading ? (
+        <div className="panel">
+          <p className="text-slate-400">
+            Loading bin locations...
+          </p>
+        </div>
+      ) : bins.length === 0 ? (
+        <div className="panel">
+          <p className="text-slate-400">
+            No bin data available.
+          </p>
+        </div>
+      ) : (
         <section className="panel">
 
-          <h3 className="font-semibold">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold">
+                Bin Locations
+              </h3>
+
+              <p className="text-sm text-slate-400 mt-1">
+                {bins.length} bins connected to FastAPI
+              </p>
+            </div>
+
+            <span className="text-xs text-emerald-400">
+              ● LIVE DATA
+            </span>
+          </div>
+
+          <div
+            id="live-map"
+            style={{
+              width: "100%",
+              height: "500px",
+              borderRadius: "12px",
+              overflow: "hidden"
+            }}
+          />
+
+        </section>
+      )}
+
+      {!loading && bins.length > 0 && (
+        <section className="panel">
+
+          <h3 className="font-semibold mb-4">
             Bin Status
           </h3>
 
-          <div className="mt-5 space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
 
             {bins.map((bin) => (
-
               <div
                 key={bin.id}
                 className="rounded-xl bg-slate-900 p-4"
               >
 
                 <div className="flex items-center justify-between">
-
                   <div>
-
-                    <p className="font-bold">
+                    <p className="font-semibold">
                       {bin.id}
                     </p>
 
-                    <p className="text-xs text-slate-400">
+                    <p className="text-sm text-slate-400">
                       {bin.area}
                     </p>
-
                   </div>
 
                   <span
                     className={
-                      "rounded-full px-2 py-1 text-xs font-bold " +
+                      "rounded-full px-2 py-1 text-xs font-semibold " +
                       (
                         bin.fill_level >= 80
                           ? "bg-red-500/15 text-red-300"
@@ -1805,40 +1789,51 @@ function LiveMap() {
                       )
                     }
                   >
-                    {bin.fill_level}%
+                    {bin.status}
                   </span>
-
                 </div>
 
-                <div className="mt-3 h-2 rounded-full bg-slate-800">
+                <div className="mt-4">
 
-                  <div
-                    className={
-                      "h-2 rounded-full " +
-                      (
-                        bin.fill_level >= 80
-                          ? "bg-red-400"
-                          : bin.fill_level >= 60
-                          ? "bg-amber-400"
-                          : "bg-emerald-400"
-                      )
-                    }
-                    style={{
-                      width: `${bin.fill_level}%`
-                    }}
-                  />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">
+                      Fill Level
+                    </span>
+
+                    <span className="font-bold">
+                      {bin.fill_level}%
+                    </span>
+                  </div>
+
+                  <div className="mt-2 h-2 rounded-full bg-slate-800">
+
+                    <div
+                      className={
+                        "h-2 rounded-full " +
+                        (
+                          bin.fill_level >= 80
+                            ? "bg-red-400"
+                            : bin.fill_level >= 60
+                            ? "bg-amber-400"
+                            : "bg-emerald-400"
+                        )
+                      }
+                      style={{
+                        width: `${bin.fill_level}%`
+                      }}
+                    />
+
+                  </div>
 
                 </div>
 
               </div>
-
             ))}
 
           </div>
 
         </section>
-
-      </div>
+      )}
 
     </div>
   );
@@ -1876,6 +1871,10 @@ function Card({
       </p>
 
     </div>
+  );
+}
+
+
   );
 }
 
