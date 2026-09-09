@@ -129,11 +129,12 @@ def get_bins(db: Session = Depends(get_db)):
             "id": bin.bin_code,
             "area": bin.area,
             "fill_level": bin.fill_level,
-            "status": bin.status
+            "status": bin.status,
+            "latitude": bin.latitude,
+            "longitude": bin.longitude
         }
         for bin in bins
     ]
-
 
 # ==============================
 # STEP 2: CREATE NEW BIN
@@ -153,10 +154,10 @@ def create_bin(
     if existing_bin:
         raise HTTPException(
             status_code=400,
-            detail="Bin code already exists"
+            detail="Bin ID already exists"
         )
 
-    if bin_data.fill_level < 0 or bin_data.fill_level > 100:
+    if not 0 <= bin_data.fill_level <= 100:
         raise HTTPException(
             status_code=400,
             detail="Fill level must be between 0 and 100"
@@ -186,9 +187,10 @@ def create_bin(
         "id": new_bin.bin_code,
         "area": new_bin.area,
         "fill_level": new_bin.fill_level,
-        "status": new_bin.status
+        "status": new_bin.status,
+        "latitude": new_bin.latitude,
+        "longitude": new_bin.longitude
     }
-
 
 # ==============================
 # STEP 3: UPDATE BIN
