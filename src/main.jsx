@@ -1875,10 +1875,6 @@ function Card({
 }
 
 
-  );
-}
-
-
 function Metric({
   label,
   value
@@ -1954,4 +1950,3 @@ function Generic({
 createRoot(
   document.getElementById("root")
 ).render(<App />);
-}
