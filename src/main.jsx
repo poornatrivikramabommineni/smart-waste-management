@@ -1334,7 +1334,7 @@ function BinManagement() {
                     latitude: e.target.value
                   })
                 }
-                placeholder="e.g.00.1234"
+                placeholder="e.g. 00.1234"
                 className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
               />
             </div>
@@ -1355,7 +1355,7 @@ function BinManagement() {
                     longitude: e.target.value
                   })
                 }
-                placeholder="e.g.00.4321"
+                placeholder="e.g. 00.4321"
                 className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
               />
             </div>
