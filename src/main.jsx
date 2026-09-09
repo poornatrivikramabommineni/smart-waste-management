@@ -1039,58 +1039,74 @@ function BinManagement() {
 
   // Add / Update bin
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      setError("");
+  try {
+    setError("");
 
-      const payload = {
-        bin_code: form.bin_code,
-        area: form.area,
-        fill_level: Number(form.fill_level),
-        latitude:
-          form.latitude === ""
-            ? null
-            : Number(form.latitude),
-        longitude:
-          form.longitude === ""
-            ? null
-            : Number(form.longitude)
-      };
+    const payload = {
+      bin_code: form.bin_code.trim(),
+      area: form.area.trim(),
+      fill_level: Number(form.fill_level),
+      latitude:
+        form.latitude === ""
+          ? null
+          : Number(form.latitude),
+      longitude:
+        form.longitude === ""
+          ? null
+          : Number(form.longitude)
+    };
 
-      const url = editingBin
-        ? `${API_URL}/api/bins/${editingBin}`
-        : `${API_URL}/api/bins`;
+    console.log("Sending bin data:", payload);
 
-      const method = editingBin ? "PUT" : "POST";
+    const url = editingBin
+      ? `${API_URL}/api/bins/${editingBin}`
+      : `${API_URL}/api/bins`;
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
+    const method = editingBin ? "PUT" : "POST";
 
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Operation failed");
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const responseText = await response.text();
+
+    console.log("Backend response:", response.status, responseText);
+
+    if (!response.ok) {
+      let message = responseText;
+
+      try {
+        const errorData = JSON.parse(responseText);
+
+        if (errorData.detail) {
+          message =
+            typeof errorData.detail === "string"
+              ? errorData.detail
+              : JSON.stringify(errorData.detail);
+        }
+      } catch {
+        // Response was not JSON
       }
 
-      resetForm();
-      await fetchBins();
-
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        editingBin
-          ? "Unable to update bin"
-          : "Unable to add bin"
+      throw new Error(
+        message || `Request failed with status ${response.status}`
       );
     }
-  };
 
+        resetForm();
+    await fetchBins();
+
+  } catch (err) {
+    console.error("ADD BIN ERROR:", err);
+    setError(err.message);
+  }
+};
   // Edit bin
   const handleEdit = (bin) => {
     setEditingBin(bin.id);
@@ -1254,7 +1270,7 @@ function BinManagement() {
                     bin_code: e.target.value
                   })
                 }
-                placeholder="BIN-104"
+                placeholder="e.g. BIN-000"
                 className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500 disabled:opacity-50"
               />
             </div>
@@ -1275,7 +1291,7 @@ function BinManagement() {
                     area: e.target.value
                   })
                 }
-                placeholder="City Center"
+                placeholder=""
                 className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
               />
             </div>
@@ -1318,7 +1334,7 @@ function BinManagement() {
                     latitude: e.target.value
                   })
                 }
-                placeholder="16.5062"
+                placeholder="e.g.00.1234"
                 className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
               />
             </div>
@@ -1339,7 +1355,7 @@ function BinManagement() {
                     longitude: e.target.value
                   })
                 }
-                placeholder="80.6480"
+                placeholder="e.g.00.4321"
                 className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
               />
             </div>
