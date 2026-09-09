@@ -220,6 +220,10 @@ function App() {
 
   <Alerts />
 
+) : page === "Bin Management" ? (
+
+  <BinManagement />
+
 ) : page === "Predictions" ? (
 
   <Predictions />
@@ -977,119 +981,585 @@ function Alerts() {
 
 
 function BinManagement() {
-
-  // Bin Management code will go here
   const [bins, setBins] = useState([]);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-const fetchBins = async () => {
-  try {
-    setLoading(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingBin, setEditingBin] = useState(null);
 
-    const response = await fetch(`${API_URL}/api/bins`);
+  const [form, setForm] = useState({
+    bin_code: "",
+    area: "",
+    fill_level: 0,
+    latitude: "",
+    longitude: ""
+  });
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch bins");
+  // Fetch all bins
+  const fetchBins = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(`${API_URL}/api/bins`);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch bins");
+      }
+
+      const data = await response.json();
+      setBins(data);
+
+    } catch (err) {
+      console.error(err);
+      setError("Unable to load bins");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBins();
+  }, []);
+
+  // Reset form
+  const resetForm = () => {
+    setForm({
+      bin_code: "",
+      area: "",
+      fill_level: 0,
+      latitude: "",
+      longitude: ""
+    });
+
+    setEditingBin(null);
+    setShowForm(false);
+  };
+
+  // Add / Update bin
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setError("");
+
+      const payload = {
+        bin_code: form.bin_code,
+        area: form.area,
+        fill_level: Number(form.fill_level),
+        latitude:
+          form.latitude === ""
+            ? null
+            : Number(form.latitude),
+        longitude:
+          form.longitude === ""
+            ? null
+            : Number(form.longitude)
+      };
+
+      const url = editingBin
+        ? `${API_URL}/api/bins/${editingBin}`
+        : `${API_URL}/api/bins`;
+
+      const method = editingBin ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Operation failed");
+      }
+
+      resetForm();
+      await fetchBins();
+
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        editingBin
+          ? "Unable to update bin"
+          : "Unable to add bin"
+      );
+    }
+  };
+
+  // Edit bin
+  const handleEdit = (bin) => {
+    setEditingBin(bin.id);
+
+    setForm({
+      bin_code: bin.id,
+      area: bin.area,
+      fill_level: bin.fill_level,
+      latitude: bin.latitude ?? "",
+      longitude: bin.longitude ?? ""
+    });
+
+    setShowForm(true);
+  };
+
+  // Delete bin
+  const handleDelete = async (binCode) => {
+    const confirmed = window.confirm(
+      `Delete ${binCode}?`
+    );
+
+    if (!confirmed) {
+      return;
     }
 
-    const data = await response.json();
-    setBins(data);
-    setError("");
-  } catch (err) {
-    setError("Unable to load bins");
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setError("");
 
-useEffect(() => {
-  fetchBins();
-}, []);
+      const response = await fetch(
+        `${API_URL}/api/bins/${binCode}`,
+        {
+          method: "DELETE"
+        }
+      );
 
-return (
-  <div className="space-y-6">
+      if (!response.ok) {
+        throw new Error("Failed to delete bin");
+      }
 
-    <div className="flex items-center justify-between">
-      <div>
-        <h2 className="text-2xl font-bold">Bin Management</h2>
-        <p className="text-gray-500">
-          Manage and monitor all waste bins
-        </p>
+      await fetchBins();
+
+    } catch (err) {
+      console.error(err);
+      setError("Unable to delete bin");
+    }
+  };
+
+  // Status color
+  const getStatusClass = (status) => {
+    if (status === "Critical") {
+      return "bg-red-500/15 text-red-300";
+    }
+
+    if (status === "Warning") {
+      return "bg-amber-500/15 text-amber-300";
+    }
+
+    return "bg-emerald-500/15 text-emerald-300";
+  };
+
+  return (
+    <div className="space-y-6">
+
+      {/* HEADER */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+
+        <div>
+          <p className="text-emerald-400 text-sm font-semibold">
+            SMART CITY OPERATIONS
+          </p>
+
+          <h2 className="mt-1 text-3xl font-bold">
+            Bin Management
+          </h2>
+
+          <p className="mt-2 text-slate-400">
+            Add, update and monitor waste bins.
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+
+          {/* REFRESH */}
+          <button
+            onClick={fetchBins}
+            className="flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold hover:bg-slate-800"
+          >
+            <RefreshCw size={16} />
+            Refresh
+          </button>
+
+          {/* ADD BIN */}
+          <button
+            onClick={() => {
+              setEditingBin(null);
+
+              setForm({
+                bin_code: "",
+                area: "",
+                fill_level: 0,
+                latitude: "",
+                longitude: ""
+              });
+
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold hover:bg-emerald-500"
+          >
+            <Plus size={16} />
+            Add Bin
+          </button>
+
+        </div>
       </div>
 
-      <button
-        onClick={fetchBins}
-        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg"
-      >
-        <RefreshCw size={18} />
-        Refresh
-      </button>
-    </div>
+      {/* ERROR */}
+      {error && (
+        <div className="rounded-xl border border-red-800 bg-red-950/40 p-4 text-red-300">
+          ⚠️ {error}
+        </div>
+      )}
 
-    {loading && (
-      <p className="text-gray-500">Loading bins...</p>
-    )}
+      {/* ADD / EDIT FORM */}
+      {showForm && (
+        <section className="panel">
 
-    {error && (
-      <p className="text-red-500">{error}</p>
-    )}
+          <div className="flex items-center justify-between">
 
-    {!loading && !error && (
-      <div className="bg-white rounded-xl shadow overflow-hidden">
+            <h3 className="text-lg font-semibold">
+              {editingBin ? "Edit Bin" : "Add New Bin"}
+            </h3>
 
-        <table className="w-full">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="text-left p-4">Bin ID</th>
-              <th className="text-left p-4">Area</th>
-              <th className="text-left p-4">Fill Level</th>
-              <th className="text-left p-4">Status</th>
-            </tr>
-          </thead>
+            <button
+              onClick={resetForm}
+              className="text-slate-400 hover:text-white"
+            >
+              <X size={20} />
+            </button>
 
-          <tbody>
-            {bins.map((bin) => (
-              <tr key={bin.id} className="border-t">
+          </div>
 
-                <td className="p-4 font-medium">
-                  {bin.id}
-                </td>
+          <form
+            onSubmit={handleSubmit}
+            className="mt-5 grid gap-4 md:grid-cols-2"
+          >
 
-                <td className="p-4">
-                  {bin.area}
-                </td>
+            {/* BIN ID */}
+            <div>
+              <label className="text-sm text-slate-400">
+                Bin ID
+              </label>
 
-                <td className="p-4">
-                  {bin.fill_level}%
-                </td>
+              <input
+                type="text"
+                required
+                value={form.bin_code}
+                disabled={editingBin !== null}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    bin_code: e.target.value
+                  })
+                }
+                placeholder="BIN-104"
+                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500 disabled:opacity-50"
+              />
+            </div>
 
-                <td className="p-4">
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      bin.status === "Critical"
-                        ? "bg-red-100 text-red-700"
-                        : bin.status === "Warning"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-green-100 text-green-700"
-                    }`}
+            {/* AREA */}
+            <div>
+              <label className="text-sm text-slate-400">
+                Area
+              </label>
+
+              <input
+                type="text"
+                required
+                value={form.area}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    area: e.target.value
+                  })
+                }
+                placeholder="City Center"
+                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            {/* FILL LEVEL */}
+            <div>
+              <label className="text-sm text-slate-400">
+                Fill Level (%)
+              </label>
+
+              <input
+                type="number"
+                min="0"
+                max="100"
+                required
+                value={form.fill_level}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    fill_level: e.target.value
+                  })
+                }
+                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            {/* LATITUDE */}
+            <div>
+              <label className="text-sm text-slate-400">
+                Latitude
+              </label>
+
+              <input
+                type="number"
+                step="any"
+                value={form.latitude}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    latitude: e.target.value
+                  })
+                }
+                placeholder="16.5062"
+                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            {/* LONGITUDE */}
+            <div>
+              <label className="text-sm text-slate-400">
+                Longitude
+              </label>
+
+              <input
+                type="number"
+                step="any"
+                value={form.longitude}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    longitude: e.target.value
+                  })
+                }
+                placeholder="80.6480"
+                className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            {/* BUTTONS */}
+            <div className="flex items-end gap-3">
+
+              <button
+                type="submit"
+                className="rounded-lg bg-emerald-600 px-5 py-3 font-semibold hover:bg-emerald-500"
+              >
+                {editingBin ? "Update Bin" : "Add Bin"}
+              </button>
+
+              <button
+                type="button"
+                onClick={resetForm}
+                className="rounded-lg border border-slate-700 px-5 py-3 font-semibold hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+
+            </div>
+
+          </form>
+        </section>
+      )}
+
+      {/* BIN TABLE */}
+      <section className="panel">
+
+        <div className="flex items-center justify-between">
+
+          <div>
+            <h3 className="font-semibold">
+              All Waste Bins
+            </h3>
+
+            <p className="mt-1 text-sm text-slate-400">
+              {bins.length} bins connected to FastAPI
+            </p>
+          </div>
+
+          <span className="text-xs text-emerald-400">
+            ● API CONNECTED
+          </span>
+
+        </div>
+
+        {/* LOADING */}
+        {loading ? (
+
+          <p className="mt-6 text-slate-400">
+            Loading bins...
+          </p>
+
+        ) : bins.length === 0 ? (
+
+          /* NO BINS */
+          <div className="mt-6 rounded-xl bg-slate-900 p-8 text-center">
+
+            <Trash2
+              size={36}
+              className="mx-auto text-slate-500"
+            />
+
+            <p className="mt-3 font-semibold">
+              No bins found
+            </p>
+
+            <p className="mt-1 text-sm text-slate-400">
+              Add your first waste bin.
+            </p>
+
+          </div>
+
+        ) : (
+
+          /* TABLE */
+          <div className="mt-5 overflow-x-auto">
+
+            <table className="w-full min-w-[750px]">
+
+              <thead>
+                <tr className="border-b border-slate-800 text-left text-sm text-slate-400">
+
+                  <th className="p-4">
+                    Bin ID
+                  </th>
+
+                  <th className="p-4">
+                    Area
+                  </th>
+
+                  <th className="p-4">
+                    Fill Level
+                  </th>
+
+                  <th className="p-4">
+                    Status
+                  </th>
+
+                  <th className="p-4 text-right">
+                    Actions
+                  </th>
+
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {bins.map((bin) => (
+
+                  <tr
+                    key={bin.id}
+                    className="border-b border-slate-800/60 hover:bg-slate-900/60"
                   >
-                    {bin.status}
-                  </span>
-                </td>
 
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    {/* BIN ID */}
+                    <td className="p-4 font-semibold">
+                      {bin.id}
+                    </td>
 
-      </div>
-    )}
+                    {/* AREA */}
+                    <td className="p-4 text-slate-300">
+                      {bin.area}
+                    </td>
 
-  </div>
-);
+                    {/* FILL LEVEL */}
+                    <td className="p-4">
 
+                      <div className="flex items-center gap-3">
+
+                        <div className="h-2 w-24 rounded-full bg-slate-800">
+
+                          <div
+                            className={
+                              "h-2 rounded-full " +
+                              (
+                                bin.fill_level >= 80
+                                  ? "bg-red-400"
+                                  : bin.fill_level >= 60
+                                  ? "bg-amber-400"
+                                  : "bg-emerald-400"
+                              )
+                            }
+                            style={{
+                              width: `${bin.fill_level}%`
+                            }}
+                          />
+
+                        </div>
+
+                        <span className="font-semibold">
+                          {bin.fill_level}%
+                        </span>
+
+                      </div>
+
+                    </td>
+
+                    {/* STATUS */}
+                    <td className="p-4">
+
+                      <span
+                        className={
+                          "rounded-full px-3 py-1 text-xs font-bold " +
+                          getStatusClass(bin.status)
+                        }
+                      >
+                        {bin.status}
+                      </span>
+
+                    </td>
+
+                    {/* ACTIONS */}
+                    <td className="p-4">
+
+                      <div className="flex justify-end gap-2">
+
+                        {/* EDIT */}
+                        <button
+                          onClick={() => handleEdit(bin)}
+                          className="rounded-lg border border-slate-700 p-2 text-slate-300 hover:bg-slate-800 hover:text-white"
+                          title="Edit bin"
+                        >
+                          <Edit size={16} />
+                        </button>
+
+                        {/* DELETE */}
+                        <button
+                          onClick={() => handleDelete(bin.id)}
+                          className="rounded-lg border border-red-900 p-2 text-red-400 hover:bg-red-950"
+                          title="Delete bin"
+                        >
+                          <Trash size={16} />
+                        </button>
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        )}
+
+      </section>
+
+    </div>
+  );
 }
+
 
 function Predictions() {
   const [bins, setBins] = useState([]);
