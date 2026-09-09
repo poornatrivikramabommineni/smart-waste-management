@@ -1,17 +1,44 @@
-from fastapi import FastAPI, Depends
+```python
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from database import get_db, Base, engine, SessionLocal
 from models import Bin
 from route_optimizer import optimize_route, distance_km
 
 
-# Create database tables
+# ==============================
+# Request Schemas
+# ==============================
+
+class BinCreate(BaseModel):
+    bin_code: str
+    area: str
+    fill_level: int
+    latitude: float | None = None
+    longitude: float | None = None
+
+
+class BinUpdate(BaseModel):
+    area: str
+    fill_level: int
+    latitude: float | None = None
+    longitude: float | None = None
+
+
+# ==============================
+# Create Database Tables
+# ==============================
+
 Base.metadata.create_all(bind=engine)
 
 
-# Add sample bins if database is empty
+# ==============================
+# Add Sample Bins
+# ==============================
+
 db = SessionLocal()
 
 if db.query(Bin).count() == 0:
@@ -48,7 +75,10 @@ if db.query(Bin).count() == 0:
 db.close()
 
 
-# Create FastAPI application
+# ==============================
+# Create FastAPI Application
+# ==============================
+
 app = FastAPI(
     title="Smart Waste Management API",
     description="Backend API for Smart Waste Management System",
@@ -56,7 +86,10 @@ app = FastAPI(
 )
 
 
-# CORS configuration
+# ==============================
+# CORS Configuration
+# ==============================
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -71,7 +104,10 @@ app.add_middleware(
 )
 
 
-# Home endpoint
+# ==============================
+# Home Endpoint
+# ==============================
+
 @app.get("/")
 def home():
     return {
@@ -80,7 +116,10 @@ def home():
     }
 
 
-# Get all bins
+# ==============================
+# STEP 1: GET ALL BINS
+# ==============================
+
 @app.get("/api/bins")
 def get_bins(db: Session = Depends(get_db)):
     bins = db.query(Bin).all()
@@ -96,7 +135,147 @@ def get_bins(db: Session = Depends(get_db)):
     ]
 
 
-# Dashboard collection overview
+# ==============================
+# STEP 2: CREATE NEW BIN
+# ==============================
+
+@app.post("/api/bins")
+def create_bin(
+    bin_data: BinCreate,
+    db: Session = Depends(get_db)
+):
+    existing_bin = (
+        db.query(Bin)
+        .filter(Bin.bin_code == bin_data.bin_code)
+        .first()
+    )
+
+    if existing_bin:
+        raise HTTPException(
+            status_code=400,
+            detail="Bin code already exists"
+        )
+
+    if bin_data.fill_level < 0 or bin_data.fill_level > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Fill level must be between 0 and 100"
+        )
+
+    if bin_data.fill_level >= 80:
+        status = "Critical"
+    elif bin_data.fill_level >= 60:
+        status = "Warning"
+    else:
+        status = "Normal"
+
+    new_bin = Bin(
+        bin_code=bin_data.bin_code,
+        area=bin_data.area,
+        fill_level=bin_data.fill_level,
+        status=status,
+        latitude=bin_data.latitude,
+        longitude=bin_data.longitude
+    )
+
+    db.add(new_bin)
+    db.commit()
+    db.refresh(new_bin)
+
+    return {
+        "id": new_bin.bin_code,
+        "area": new_bin.area,
+        "fill_level": new_bin.fill_level,
+        "status": new_bin.status
+    }
+
+
+# ==============================
+# STEP 3: UPDATE BIN
+# ==============================
+
+@app.put("/api/bins/{bin_code}")
+def update_bin(
+    bin_code: str,
+    bin_data: BinUpdate,
+    db: Session = Depends(get_db)
+):
+    bin_item = (
+        db.query(Bin)
+        .filter(Bin.bin_code == bin_code)
+        .first()
+    )
+
+    if not bin_item:
+        raise HTTPException(
+            status_code=404,
+            detail="Bin not found"
+        )
+
+    if bin_data.fill_level < 0 or bin_data.fill_level > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Fill level must be between 0 and 100"
+        )
+
+    if bin_data.fill_level >= 80:
+        status = "Critical"
+    elif bin_data.fill_level >= 60:
+        status = "Warning"
+    else:
+        status = "Normal"
+
+    bin_item.area = bin_data.area
+    bin_item.fill_level = bin_data.fill_level
+    bin_item.status = status
+    bin_item.latitude = bin_data.latitude
+    bin_item.longitude = bin_data.longitude
+
+    db.commit()
+    db.refresh(bin_item)
+
+    return {
+        "id": bin_item.bin_code,
+        "area": bin_item.area,
+        "fill_level": bin_item.fill_level,
+        "status": bin_item.status
+    }
+
+
+# ==============================
+# STEP 4: DELETE BIN
+# ==============================
+
+@app.delete("/api/bins/{bin_code}")
+def delete_bin(
+    bin_code: str,
+    db: Session = Depends(get_db)
+):
+    bin_item = (
+        db.query(Bin)
+        .filter(Bin.bin_code == bin_code)
+        .first()
+    )
+
+    if not bin_item:
+        raise HTTPException(
+            status_code=404,
+            detail="Bin not found"
+        )
+
+    db.delete(bin_item)
+    db.commit()
+
+    return {
+        "message": "Bin deleted successfully",
+        "id": bin_code
+    }
+
+
+# ==============================
+# STEP 5: DASHBOARD OVERVIEW
+# ==============================
+
 @app.get("/api/dashboard/overview")
 def get_dashboard_overview(db: Session = Depends(get_db)):
     bins = db.query(Bin).all()
@@ -124,7 +303,10 @@ def get_dashboard_overview(db: Session = Depends(get_db)):
     }
 
 
-# Optimized collection route
+# ==============================
+# ROUTE OPTIMIZATION
+# ==============================
+
 @app.get("/api/route/optimize")
 def get_optimized_route(db: Session = Depends(get_db)):
     bins = db.query(Bin).all()
@@ -158,3 +340,4 @@ def get_optimized_route(db: Session = Depends(get_db)):
         "total_stops": len(route),
         "estimated_distance_km": round(total_distance, 2)
     }
+```
