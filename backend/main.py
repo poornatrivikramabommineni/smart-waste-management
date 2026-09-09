@@ -341,4 +341,3 @@ def get_optimized_route(db: Session = Depends(get_db)):
         "total_stops": len(route),
         "estimated_distance_km": round(total_distance, 2)
     }
-```
